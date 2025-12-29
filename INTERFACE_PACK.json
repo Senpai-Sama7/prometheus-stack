@@ -1,0 +1,147 @@
+{
+  "interface_pack": {
+    "version": "2.0",
+    "date": "2025-12-28",
+    "claim_bundle_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "id": {"type": "string"},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "origin_agent": {"type": "string"},
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "statement": {"type": "string"},
+              "claim_type": {"type": "string", "enum": ["FACT", "INFERENCE", "DECISION"]},
+              "evidence_pointers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "source": {"type": "string"},
+                    "source_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "evidence_hash": {"type": "string"},
+                    "retrieved_at": {"type": "string", "format": "date-time"}
+                  },
+                  "required": ["source", "source_confidence", "evidence_hash"]
+                }
+              },
+              "uncertainty": {
+                "type": "object",
+                "properties": {
+                  "method": {"type": "string", "enum": ["semantic_entropy", "model_disagreement", "confidence_score", "conformal_set"]},
+                  "value": {"type": "number", "minimum": 0, "maximum": 1},
+                  "interpretation": {"type": "string"},
+                  "gate_recommendation": {"type": "string", "enum": ["EXECUTE", "DEFER", "REFUSE", "EXPLAIN"]}
+                },
+                "required": ["method", "value"]
+              },
+              "risk_tier": {"type": "string", "enum": ["READ_ONLY", "WRITE_LIMITED", "MODIFY", "DELETE", "PRIVILEGE"]},
+              "if_wrong_cost": {"type": "string"}
+            },
+            "required": ["id", "statement", "claim_type", "uncertainty", "risk_tier"]
+          }
+        },
+        "decision": {"type": "string", "enum": ["PUBLISH", "DEFER", "ESCALATE", "REFUSE"]},
+        "reason": {"type": "string"},
+        "required_approvals": {"type": "array", "items": {"type": "string"}},
+        "audit_trail": {
+          "type": "object",
+          "properties": {
+            "gates_passed": {"type": "array", "items": {"type": "string"}},
+            "gates_failed": {"type": "array", "items": {"type": "string"}},
+            "human_approvals": {"type": "array"}
+          }
+        }
+      },
+      "required": ["id", "timestamp", "origin_agent", "claims", "decision", "audit_trail"]
+    },
+    "gate_stack": [
+      {
+        "name": "Evidence Gate",
+        "rule": "If claim_type == FACT, evidence_pointers must be non-empty and confidence >= 0.60",
+        "on_fail": "REFUSE",
+        "on_success": "EXECUTE"
+      },
+      {
+        "name": "Uncertainty Gate",
+        "rule": "If uncertainty > 0.75, DEFER. If > 0.50, EXPLAIN. Else EXECUTE.",
+        "on_fail": "DEFER",
+        "on_success": "EXECUTE"
+      },
+      {
+        "name": "Security Gate",
+        "rule": "agent_tier >= tool_tier. Validate MCP Origin if HTTP.",
+        "on_fail": "REFUSE",
+        "on_success": "EXECUTE"
+      },
+      {
+        "name": "Adversarial Gate",
+        "rule": "Guardian agent evaluates anomalies. If threat_score > 0.70, DEFER.",
+        "on_fail": "DEFER",
+        "on_success": "EXECUTE"
+      },
+      {
+        "name": "Human Approval Gate",
+        "rule": "PRIVILEGE and DELETE tier require human sign-off. MODIFY tier logged.",
+        "on_fail": "ESCALATE",
+        "on_success": "EXECUTE"
+      }
+    ],
+    "hypothesis_registry": [
+      {
+        "id": "H001",
+        "claim": "Semantic entropy AUROC >= 0.75",
+        "test": "Internal 100-example hallucination set",
+        "threshold": 0.75,
+        "timeline": "Week 4",
+        "status": "UNTESTED"
+      },
+      {
+        "id": "H002",
+        "claim": "Guardian ASR reduction >= 40%",
+        "test": "BAD-ACTS-style adversarial attacks",
+        "threshold": 0.40,
+        "timeline": "Week 9",
+        "status": "UNTESTED"
+      },
+      {
+        "id": "H003",
+        "claim": "MCP integration < 30 minutes per system",
+        "test": "Onboard 3 systems (Slack, HubSpot, Stripe)",
+        "threshold": 30,
+        "timeline": "Week 2",
+        "status": "UNTESTED"
+      },
+      {
+        "id": "H004",
+        "claim": "Claim integrity rate >= 95%",
+        "test": "Manual audit of 200 published claims",
+        "threshold": 0.95,
+        "timeline": "Week 16",
+        "status": "UNTESTED"
+      }
+    ],
+    "mcp_compliance": {
+      "spec_version": "2025-06-18",
+      "transports": [
+        {
+          "name": "stdio",
+          "security_notes": "Assumed local/trusted. No additional validation required."
+        },
+        {
+          "name": "streamable_http",
+          "security_requirements": [
+            "MUST validate Origin header (DNS rebinding protection)",
+            "MUST use HTTPS (production)",
+            "OPTIONAL: Request signing"
+          ]
+        }
+      ]
+    }
+  }
+}
