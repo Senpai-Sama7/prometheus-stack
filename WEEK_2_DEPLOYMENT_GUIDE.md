@@ -1,378 +1,393 @@
-# 🔴 WEEK 2: PRODUCTION DEPLOYMENT, TESTING & ARCHITECTURE REVIEW
+# PROMETHEUS v2.0 — Production Deployment Guide
 
-## Complete Step-by-Step Execution Guide
+## Phase 2 Execution: Trust-Engine-First AI Orchestration
 
-*All four steps below. No shortcuts. Watch it work.*
+### 🎯 Deployment Overview
+
+This guide deploys **PROMETHEUS v2.0** — an auditable, evidence-gated AI orchestration engine built for high-stakes workflows.
+
+**Key Guarantees:**
+- ✅ Every AI claim has proof. Hallucinations rejected at runtime.
+- ✅ Full execution lineage for compliance audits
+- ✅ Guardian agents enforce safety gates
+- ✅ MCP-first design (extensible tool ecosystem)
 
 ---
 
-# STEP 1: DEPLOY TO PRODUCTION IMMEDIATELY
+## Pre-Deployment Checklist
 
-## Prerequisites Check
+### System Requirements
+```
+✅ Python 3.8+
+✅ 4+ CPU cores (8+ for production)
+✅ 16GB+ RAM (32GB recommended)
+✅ 100GB+ SSD storage
+✅ Docker 20.10+
+✅ PostgreSQL 13+ (or managed RDS)
+✅ Redis 6+ (for caching & state)
+```
 
+### Credential Setup
 ```bash
-# Verify you have:
-✅ Docker installed
-✅ API keys ready (ANTHROPIC_API_KEY, OPENAI_API_KEY)
-✅ Port 8000 available
+# Create .env from template
+cp .env.example .env
 
-# Quick verify:
-docker --version
-docker-compose --version
+# Required keys:
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-anthropic-...
+GUMROAD_API_KEY=...
+ETSY_API_KEY=...
+JWT_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+ENCRYPTION_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
 ```
 
-## Build & Deploy Docker Image
-
-### Create: `Dockerfile.prod`
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install system deps
-RUN apt-get update && apt-get install -y \
-    gcc curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements
-COPY requirements-week2.txt .
-
-# Install Python deps
-RUN pip install --no-cache-dir -r requirements-week2.txt
-
-# Copy code
-COPY langgraph_api_server.py .
-COPY test_langgraph_integration.py .
-COPY . .
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')"
-
-# Run server
-CMD ["python", "-u", "langgraph_api_server.py"]
-```
-
-### Build it:
+### Verification
 ```bash
-docker build -t langgraph-api:latest -f Dockerfile.prod .
+# Run checkpoint tests
+python WEEK_2_STATE_MACHINE.py --verify
 
-# Expected output:
-# Successfully tagged langgraph-api:latest
+# Output should show:
+✅ State machine verified
+✅ Checkpoint system operational
+✅ Evidence gates armed
+✅ All systems operational
 ```
 
-### Verify image:
+---
+
+## Docker Deployment (Recommended for Local/Dev)
+
+### Quick Start
 ```bash
-docker images | grep langgraph-api
-# Should show: langgraph-api    latest    <image-id>    <size>
+# Build image
+docker build -t prometheus:v2.0 -f Dockerfile .
+
+# Run container
+docker run -d \
+  --name prometheus-v2 \
+  --env-file .env \
+  -p 8000:8000 \
+  -p 9090:9090 \
+  -v prometheus-data:/data \
+  prometheus:v2.0
+
+# Verify deployment
+curl -s http://localhost:8000/health | jq .
 ```
 
-## Create Production Docker Compose
-
-### Create: `docker-compose.prod.yml`
-
-```yaml
-version: '3.9'
-
-services:
-  # MAIN API SERVER
-  langgraph-api:
-    image: langgraph-api:latest
-    container_name: langgraph-api-prod
-    ports:
-      - "8000:8000"
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LOG_LEVEL=INFO
-      - WORKERS=4
-      - PORT=8000
-      - ENVIRONMENT=production
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - langgraph-net
-    volumes:
-      - ./logs:/app/logs
-
-  # DATABASE (PostgreSQL)
-  postgres:
-    image: postgres:15-alpine
-    container_name: langgraph-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=langgraph
-      - POSTGRES_PASSWORD=secure_password_change_me
-      - POSTGRES_DB=claims
-    restart: unless-stopped
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U langgraph"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - langgraph-net
-
-  # PROMETHEUS (Metrics Collection)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: langgraph-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    restart: unless-stopped
-    networks:
-      - langgraph-net
-
-  # GRAFANA (Visualization)
-  grafana:
-    image: grafana/grafana:latest
-    container_name: langgraph-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    restart: unless-stopped
-    volumes:
-      - grafana_data:/var/lib/grafana
-    networks:
-      - langgraph-net
-    depends_on:
-      - prometheus
-
-networks:
-  langgraph-net:
-    driver: bridge
-
-volumes:
-  postgres_data:
-  prometheus_data:
-  grafana_data:
-```
-
-### Deploy:
+### Docker Compose (Recommended)
 ```bash
-# Set environment variables
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-
-# Start all services
+# Full stack: app + PostgreSQL + Redis + Prometheus
 docker-compose -f docker-compose.prod.yml up -d
 
-# Check status
+# Logs
+docker-compose -f docker-compose.prod.yml logs -f app
+
+# Verify services
 docker-compose -f docker-compose.prod.yml ps
 ```
 
-## Verify Deployment
+---
 
-### Test 1: Health Check
+## Kubernetes Deployment (Production)
+
+### Prerequisites
 ```bash
-curl -s http://localhost:8000/health | jq .
+# Verify cluster access
+kubectl cluster-info
+kubectl get nodes
 
-# Expected response:
+# Create namespace
+kubectl create namespace prometheus-prod
+kubectl config set-context --current --namespace=prometheus-prod
+```
+
+### Deploy
+```bash
+# Create secrets from .env
+kubectl create secret generic prometheus-secrets --from-env-file=.env
+
+# Apply manifests
+kubectl apply -f k8s/
+
+# Verify deployment
+kubectl get pods
+kubectl get svc
+kubectl logs -f deployment/prometheus-app
+```
+
+### Health Checks
+```bash
+# Port forward to local
+kubectl port-forward svc/prometheus-app 8000:8000
+
+# Test health
+curl http://localhost:8000/health
+curl http://localhost:8000/metrics
+```
+
+---
+
+## AWS Deployment (ECS + RDS)
+
+### Infrastructure Setup
+```bash
+# Create RDS PostgreSQL
+aws rds create-db-instance \
+  --db-instance-identifier prometheus-prod-db \
+  --db-instance-class db.t3.large \
+  --engine postgres \
+  --allocated-storage 100
+
+# Create ElastiCache Redis
+aws elasticache create-cache-cluster \
+  --cache-cluster-id prometheus-cache \
+  --cache-node-type cache.t3.medium \
+  --engine redis
+
+# Push image to ECR
+aws ecr get-login-password | docker login --username AWS --password-stdin ACCOUNT.dkr.ecr.REGION.amazonaws.com
+docker tag prometheus:v2.0 ACCOUNT.dkr.ecr.REGION.amazonaws.com/prometheus:v2.0
+docker push ACCOUNT.dkr.ecr.REGION.amazonaws.com/prometheus:v2.0
+```
+
+### ECS Task Definition
+```json
 {
-  "status": "healthy",
-  "version": "1.0.0",
-  "uptime_seconds": 3.24,
-  "timestamp": "2025-12-29T09:00:15Z"
+  "family": "prometheus-v2",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "containerDefinitions": [
+    {
+      "name": "prometheus",
+      "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/prometheus:v2.0",
+      "portMappings": [{"containerPort": 8000}],
+      "environment": [{"name": "ENVIRONMENT", "value": "production"}],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/prometheus-v2",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
 }
 ```
 
-### Test 2: API Docs
+### Deploy to ECS
 ```bash
-# Open in browser:
-http://localhost:8000/docs
-# You should see Swagger UI with all 8 endpoints listed
+# Register task definition
+aws ecs register-task-definition --cli-input-json file://task-definition.json
+
+# Create service
+aws ecs create-service \
+  --cluster prometheus-prod \
+  --service-name prometheus-v2 \
+  --task-definition prometheus-v2 \
+  --desired-count 2 \
+  --launch-type FARGATE
+
+# Monitor
+aws ecs describe-services --cluster prometheus-prod --services prometheus-v2
 ```
 
 ---
 
-# STEP 2: TEST THE SYSTEM LOCALLY (FULL SETUP)
+## Monitoring & Observability
 
-## Environment Setup
-
+### Prometheus Metrics
 ```bash
-# Create virtual environment
-python -m venv venv
+# Metrics endpoint
+curl http://localhost:9090/metrics
 
-# Activate it
-source venv/bin/activate  # macOS/Linux
-# OR
-venv\\Scripts\\activate  # Windows
-
-# Install all dependencies
-pip install -r requirements-week2.txt
-
-# Verify imports
-python -c "
-import langgraph
-import fastapi
-import anthropic
-import openai
-import pytest
-print('✅ All imports successful')
-"
+# Key metrics:
+prometheus_evidence_gates_rejected_total
+prometheus_execution_lineage_depth
+prometheus_checkpoint_success_rate
+prometheus_guardian_decisions_per_second
 ```
 
-## Start Local API Server
-
-**Terminal 1: Start the server**
-
+### Datadog Integration
 ```bash
-python langgraph_api_server.py
+# Enable in .env
+DATADOG_API_KEY=dd_...
 
-# You should see:
-# 2025-12-29 09:05:00 | INFO | 🚀 Starting LangGraph API Server...
-# 2025-12-29 09:05:00 | INFO | ✅ Server running on http://localhost:8000
+# Automated dashboards:
+- Execution Flow Lineage
+- Evidence Gate Decisions
+- Checkpoint Verification Rate
+- Guardian Agent Performance
+- Error & Hallucination Detection
 ```
 
-## Run Full Test Suite
-
-**Terminal 2: Execute all tests**
-
+### Sentry Error Tracking
 ```bash
-# Run all 35 tests with verbose output
-pytest test_langgraph_integration.py -v --tb=short
+SENTRY_DSN=https://...
 
-# Expected:
-# ============================== 35 passed in 18.42s ==============================
-# Coverage: 95.3%
-```
-
-## Manual API Testing
-
-**Test Single Claim Processing:**
-```bash
-curl -X POST http://localhost:8000/api/v1/process-claim \
-  -H "Content-Type: application/json" \
-  -d '{
-    "claim_id": "CLM-TEST-001",
-    "user_input": "Patient undergoes total knee replacement...",
-    "claim_type": "medical",
-    "provider_id": "PROV-001",
-    "patient_id": "PAT-001"
-  }' | jq .
+# Automatic error reporting:
+- Hallucinations detected & rejected
+- Gate failures
+- Evidence validation errors
+- Checkpoint corruption
 ```
 
 ---
 
-# STEP 3: REVIEW COMPONENT ARCHITECTURE
+## Security Configuration
 
-## The Core State Definition
+### Network Security
+```bash
+# Enable TLS
+SSL_CERT_FILE=/etc/ssl/certs/prometheus.crt
+SSL_KEY_FILE=/etc/ssl/private/prometheus.key
 
-```python
-class ClaimProcessingState(TypedDict):
-    # INPUT LAYER
-    claim_id: str
-    user_input: str
-    claim_type: str
-    provider_id: str
-    patient_id: str
-    
-    # CONTROL LAYER
-    phase: Literal["validation", "analysis", "reasoning", "completion"]
-    iteration: int
-    
-    # PROCESSING LAYER
-    messages: list[dict]
-    tools_used: list[str]
-    validation_result: dict | None
-    analysis_result: dict | None
-    reasoning_result: dict | None
-    
-    # OUTPUT LAYER
-    final_determination: str  # "APPROVED" | "REJECTED" | "PENDING_REVIEW"
-    confidence_score: float   # 0.0 to 1.0
-    reasoning_chain: list[dict]
-    errors: list[str]
-    
-    # METADATA LAYER
-    start_time: datetime
-    end_time: datetime | None
-    processing_time_ms: float
+# Firewall rules (UFW example)
+sudo ufw allow 22/tcp
+sudo ufw allow 8000/tcp
+sudo ufw allow from 10.0.0.0/8 to any port 9090
 ```
 
-## The 4-Phase Workflow
+### Data Encryption
+```bash
+# At-rest encryption
+ENCRYPTION_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
 
-### Phase 1: Validation (700ms, 0 LLM calls)
-- Structural checks
-- Required fields validation
-- Format verification
-- Success rate: 98%+
-
-### Phase 2: Analysis (700ms, 1 Claude call)
-- LLM-powered entity extraction
-- Procedure & diagnosis identification
-- Structured JSON output
-- Token efficiency: ~400 tokens
-
-### Phase 3: Reasoning (1100ms, 3-5 Claude calls)
-- Multi-turn tool calling
-- Provider license verification
-- Medical necessity checking
-- Coverage rules lookup
-- Fraud indicator detection
-- Max 3 iterations (loop prevention)
-
-### Phase 4: Completion (300ms, 0 LLM calls)
-- Result packaging
-- Confidence scoring
-- Reasoning chain assembly
-- Database persistence
-
-## Total Pipeline: ~2.8 seconds
-
----
-
-# STEP 4: WEEK 3 ROADMAP
-
-## Planned Features
-
-| Feature | Status | Time | Benefit |
-|---------|--------|------|----------|
-| Real-Time Streaming | 🟡 Next | 2-3h | Live updates to clients |
-| Interactive Dashboard | 🟡 Next | 2-3h | Visualization of metrics |
-| Performance Optimization | 🟡 Next | 2-3h | 47% latency reduction |
-| Advanced Monitoring | 🟡 Next | 1-2h | Distributed tracing |
-
-## Week 3 Targets
-
+# Database encryption
+aws rds modify-db-instance \
+  --db-instance-identifier prometheus-prod-db \
+  --storage-encrypted
 ```
-Metric                    Week 2      Week 3      Improvement
-─────────────────────────────────────────────────────────────
-Single claim latency      2.8s        1.5s        47% faster ↓
-Batch throughput          21/min      60/min      185% increase ↑
-Concurrent capacity       10          50          5x improvement ↑
-Cache hit rate            0%          80%         NEW ✨
-Tool execution time       3ms         0.8ms       4x faster ↓
+
+### PII Detection
+```yaml
+# Enabled by default
+PII_DETECTION_ENABLED: true
+AUDIT_LOGGING: true
+CONTENT_POLICY_STRICT: true
 ```
 
 ---
 
-## Summary
+## Performance Optimization
 
-✅ **Production ready** - Docker deployment tested
-✅ **Fully tested** - 35 tests passing (95.3% coverage)
-✅ **Architecture reviewed** - All components explained
-🔵 **Week 3 ready** - Streaming, dashboard, optimization roadmap set
+### Caching Strategy
+```bash
+# Redis configuration
+REDIS_URL=redis://localhost:6379/0
+CACHE_TTL=3600
 
-**Next Action:** Build Week 3 features or deep-dive on any component.
+# Auto-caching:
+- Evidence verification results (1h)
+- Checkpoint manifests (6h)
+- Guardian decision patterns (24h)
+```
+
+### Database Optimization
+```sql
+-- Create indexes
+CREATE INDEX idx_execution_lineage ON executions(lineage_depth);
+CREATE INDEX idx_evidence_gates ON evidence(rejection_reason);
+CREATE INDEX idx_checkpoint_state ON checkpoints(state_hash);
+
+-- Vacuum & analyze
+VACUUM ANALYZE;
+```
+
+### Worker Configuration
+```bash
+# Optimal settings
+WORKER_PROCESSES=4
+WORKER_CLASS=uvicorn.workers.UvicornWorker
+WORKER_TIMEOUT=30
+KEEPALIVE_TIMEOUT=2
+```
+
+---
+
+## Backup & Recovery
+
+### Automated Backups
+```bash
+# PostgreSQL backups (daily)
+pg_dump prometheus_prod | gzip > backups/db_$(date +%Y%m%d).sql.gz
+
+# Redis snapshots
+redis-cli BGSAVE
+
+# Checkpoint files
+tar -czf backups/checkpoints_$(date +%Y%m%d).tar.gz ./checkpoints/
+```
+
+### Recovery Procedure
+```bash
+# Restore database
+gzip -dc backups/db_20250101.sql.gz | psql prometheus_prod
+
+# Restore Redis state
+redis-cli --rdb backups/dump.rdb
+
+# Restore checkpoints
+tar -xzf backups/checkpoints_20250101.tar.gz
+
+# Verify integrity
+python WEEK_2_STATE_MACHINE.py --verify
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### ❌ Evidence Gates Rejecting Valid Claims
+```bash
+# Check gate configuration
+curl http://localhost:8000/debug/gates
+
+# Verify evidence repository
+curl http://localhost:8000/debug/evidence-sources
+
+# Increase gate threshold temporarily
+echo 'EVIDENCE_THRESHOLD=0.8' >> .env
+docker-compose restart app
+```
+
+#### ❌ Checkpoint Corruption
+```bash
+# Verify checkpoints
+python WEEK_2_STATE_MACHINE.py --verify
+
+# Rebuild from valid checkpoint
+python -c "from src.checkpoint_manager import CheckpointManager; CheckpointManager.rebuild_from_backup()"
+```
+
+#### ❌ High Latency
+```bash
+# Check resource usage
+docker stats
+
+# Scale horizontally
+docker-compose up -d --scale app=3
+
+# Monitor metrics
+curl http://localhost:9090/metrics | grep latency
+```
+
+---
+
+## Support & Escalation
+
+**Issues?**
+- 📧 Email: DouglasMitchell@HoustonOilAirs.org
+- 🐛 GitHub Issues: https://github.com/Senpai-Sama7/prometheus-stack/issues
+- 📊 Status Dashboard: http://localhost:8000/status
+
+---
+
+**Deployment Status: ✅ READY FOR PRODUCTION**
+
+All systems tested. Evidence gates armed. Checkpoints verified. Ship it. 🚀
