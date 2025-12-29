@@ -1,12 +1,8 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -20,84 +16,19 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+PIPFILE.lock
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-.sagemath/
-
-# Environments
-.env
-.venv
-env/
+# Virtual environments
 venv/
+env/
 ENV/
 env.bak/
 venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
 
 # IDE
 .vscode/
@@ -105,13 +36,58 @@ venv.bak/
 *.swp
 *.swo
 *~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linting
+.flake8
+.pylint
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+*.logs
+logs/
+audit_logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# IDE config
+.pylintrc
+setup.cfg
 
 # OS
-.DS_Store
 Thumbs.db
+.DS_Store
 
-# Project-specific
-audit_logs/
-*.db
-*.sqlite3
-.env.local
+# Project specific
+.cache/
+*.pem
+*.key
+*.crt
