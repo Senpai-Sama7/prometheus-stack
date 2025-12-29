@@ -1,230 +1,271 @@
-# PROMETHEUS: Trust-Engine-First AI Orchestration Stack
+# PROMETHEUS: Verifiable AI Execution Engine
 
-**Status:** Engineering Build Spec v2.0 | **Timeline:** 16-week rollout | **Date:** December 28, 2025
+**TL;DR:** Agents that prove every claim has evidence. Gates that refuse hallucinations. Humans in control of irreversible actions.
 
----
+## Vision
 
-## What Is PROMETHEUS?
+AI agents are powerful. But they hallucinate. They escalate privileges. They manipulate orchestration. PROMETHEUS is a **verification engine** that:
 
-PROMETHEUS is a production-grade AI orchestration framework that runs on **contracts, gates, and evidence—not vibes.**
+1. **Collects evidence** for every claim (semantic entropy, sources, confidence scores)
+2. **Verifies claims** through 5 mandatory gates (Evidence → Uncertainty → Security → Adversarial → Human)
+3. **Maintains audit trails** for forensic reconstruction
+4. **Keeps humans in control** of irreversible actions
 
-It solves the biggest problem in modern AI systems: **How do you build an agent stack that won't hallucinate, get adversarially manipulated, or bypass your safety constraints to ship faster?**
-
-### The Stack Shape
+## Architecture
 
 ```
-Layer 0: Mini-SGLang (Serving)
+Task Input
     ↓
-Layer 1: MCP Contracts (Tool + Context Standardization)
+[Orchestrator] Decompose → Execute → Collect Evidence
     ↓
-Layer 2: LangGraph Orchestration (Checkpointing, Persistence, HiL)
+[ClaimBundle] Wrap results in contract
     ↓
-Layer 3: Multi-Modal Perception (SmolVLM + Qwen2.5-VL)
+[GateStack] 5 verification gates:
+    1. Evidence Gate       → FACT claims must have sources (confidence >= 0.60)
+    2. Uncertainty Gate    → Defer if uncertainty > 0.75
+    3. Security Gate       → Enforce privilege hierarchy
+    4. Adversarial Gate    → Guardian agent monitors anomalies
+    5. Human Approval Gate → High-risk actions require sign-off
     ↓
-Layer 4: Guardian Agents (Adversarial Defense)
-    ↓
-Layer 5: Uncertainty Gates (Semantic Entropy + Conformal Prediction)
-    ↓
-Layer 6: Evidence & Security Gates (Immutable Audit Trails)
-    ↓
-Layer 7: Narrative Generator (7-Beat Spine, Truth-Bounded)
-    ↓
-Layer 8: Commercial Engine (MMM/MTA Measurement, Brand Safety)
+[Decision]
+  ✅ PUBLISH → Output results
+  ⚠️  DEFER   → Escalate to human
+  ❌ REFUSE  → Reject action
+  🚨 ESCALATE → Blocking high-risk action
 ```
 
-**The Core Contract:**
+## Quick Start
 
-Every agent step produces a **ClaimBundle**: atomic statement + evidence + uncertainty + decision gate.
-
-No naked text escapes. No claims bypass verification. Trust Engine is sovereign over Commercial Engine.
-
----
-
-## Key Claims (Tested, Not Vibes)
-
-| Claim | Status | Hypothesis | Test |
-|-------|--------|-----------|------|
-| **Semantic entropy detects hallucinations** | Validated | H001: AUROC ≥ 0.75 | Week 4 (internal 100-example set) |
-| **Guardian agent reduces adversarial success** | Validated* | H002: ASR ↓ ≥ 40% | Week 9 (BAD-ACTS-style attacks) |
-| **MCP integration < 30 min per system** | Hypothesis | H003: < 30 min | Week 2 (3-system test) |
-| **Claim integrity rate ≥ 95%** | Hypothesis | H004: 95% facts with evidence | Week 16 (200-claim manual audit) |
-
-*Validated in BAD-ACTS paper (Nöther et al., Aug 2025). Measuring your own environment required.
-
----
-
-## Quick Start (5 Minutes)
-
-### 1. Clone
+### 1. Bootstrap Environment
 
 ```bash
-git clone https://github.com/Senpai-Sama7/prometheus-stack.git
-cd prometheus-stack
+bash scripts/bootstrap.sh
 ```
 
-### 2. Install
+This:
+- Checks Python 3.10+
+- Creates virtual environment
+- Installs dependencies
+- Creates source directories
+- Sets up audit logging
 
-```bash
-pip install -r requirements.txt
-python scripts/bootstrap.sh
-```
-
-### 3. Run Minimal Example
-
-```bash
-python examples/minimal_pipeline.py
-```
-
-### 4. Run Tests
+### 2. Run Tests
 
 ```bash
 bash scripts/run_tests.sh
 ```
 
----
+### 3. Minimal Example
 
-## Repository Structure
+```python
+from src.claim_bundle import (
+    ClaimBundle, Claim, Uncertainty, 
+    UncertaintyMethod, GateRecommendation, RiskTier, ClaimType
+)
+from src.gates import GateStack
 
-```
-prometheus-stack/
-├── README.md                              # This file
-├── ARCHITECTURE.md                        # Detailed system design
-├── BUILD_SPEC.md                          # Full 16-week rollout plan
-├── INTERFACE_PACK.json                    # JSON schemas for contracts
-├── LICENSE                                # MIT
-├── .gitignore
-├── .env.example
-├── requirements.txt
-│
-├── src/
-│   ├── __init__.py
-│   ├── claim_bundle.py                    # ClaimBundle dataclasses
-│   ├── gates.py                           # Gate implementations
-│   ├── orchestrator.py                    # LangGraph-like orchestration
-│   ├── mcp_registry.py                    # MCP tool registry
-│   ├── audit_log.py                       # Immutable audit trail
-│   ├── guardian_agent.py                  # Guardian defense
-│   └── measurement.py                     # MMM/MTA measurement policy
-│
-├── tests/
-│   ├── __init__.py
-│   ├── test_claim_bundle.py
-│   ├── test_gates.py
-│   ├── test_orchestrator.py
-│   ├── test_mcp_registry.py
-│   ├── conftest.py
-│   └── acceptance/
-│       ├── test_phase_1.py                # Contract validation
-│       ├── test_phase_2.py                # Uncertainty gate
-│       ├── test_phase_3.py                # Guardian agent
-│       └── test_phase_4.py                # Claim integrity
-│
-├── examples/
-│   ├── minimal_pipeline.py                # Working example
-│   ├── mcp_server_skeleton.py             # MCP server scaffold
-│   └── langgraph_workflow.py              # LangGraph skeleton
-│
-├── docs/
-│   ├── CONTRACTS.md
-│   ├── GATES.md
-│   ├── MCP_COMPLIANCE.md
-│   ├── HYPOTHESIS_TESTING.md
-│   ├── MEASUREMENT_POLICY.md
-│   └── DEPLOYMENT.md
-│
-└── scripts/
-    ├── bootstrap.sh
-    ├── run_tests.sh
-    ├── audit_query.py
-    └── hypothesis_report.py
+# Create a claim with evidence
+claim = Claim(
+    statement="PROMETHEUS uses semantic entropy for hallucination detection",
+    claim_type=ClaimType.FACT,
+    evidence_pointers=[
+        {
+            "source": "https://nature.com/articles/s41586-024-07421-0",
+            "source_confidence": 0.95,
+            "evidence_hash": "bd24c2aaef2ef37ae95f0f9e5f7d9e7c"
+        }
+    ],
+    uncertainty=Uncertainty(
+        method=UncertaintyMethod.SEMANTIC_ENTROPY,
+        value=0.15,
+        interpretation="Strong empirical validation",
+        gate_recommendation=GateRecommendation.EXECUTE
+    ),
+    risk_tier=RiskTier.READ_ONLY
+)
+
+# Create bundle
+bundle = ClaimBundle(origin_agent="demo_agent", claims=[claim])
+
+# Run through gates
+result = GateStack.evaluate(bundle)
+
+print(f"Decision: {bundle.decision.value}")
+print(f"Reason: {bundle.reason}")
 ```
 
----
+## Key Concepts
 
-## 16-Week Rollout
+### ClaimBundle Contract
 
-### Phase 1: Contracts & Registries (Weeks 1-2)
-- [ ] MCP server scaffold (STDIO + Streamable HTTP)
-- [ ] Tool registry with permission tiers
-- [ ] ClaimBundle JSON schema
-- [ ] Audit log (append-only)
+Every output is a **ClaimBundle** with:
+- **Claims**: Statements (FACT, INFERENCE, DECISION) with evidence and uncertainty
+- **Evidence Pointers**: Sources with confidence scores
+- **Uncertainty**: Computed via semantic entropy, model disagreement, or conformal sets
+- **Risk Tier**: Determines approval requirements
+- **Audit Trail**: Immutable log of gates passed/failed
 
-**Acceptance:** 100% of tool calls schema-valid, 100% logged
+### Uncertainty Methods
 
----
+| Method | Cost | AUROC | When to Use |
+|--------|------|-------|-------------|
+| **Semantic Entropy** | 5x | 0.78-0.81 | Recommended (Wang et al., Nature 2024) |
+| **Model Disagreement** | 3x | ~0.70 | Fast, empirical |
+| **Confidence Score** | 1x | ~0.60 | Baseline (often overconfident) |
+| **Conformal Set** | O(N+k) | 1.0* | Formal guarantees (requires calibration) |
 
-### Phase 2: Orchestration + Uncertainty Gates (Weeks 3-5)
-- [ ] LangGraph workflow (Decompose → Execute → Gate → Invoke)
-- [ ] Uncertainty gate (semantic entropy or model disagreement)
-- [ ] Test H001: Semantic entropy AUROC ≥ 0.75
+*Conformal prediction: guaranteed coverage, not AUROC
 
-**Acceptance:** Hallucination detection AUROC ≥ 0.75, 5-15% defer rate
+### Gate Stack
 
----
+1. **Evidence Gate**: FACT claims must have evidence (confidence >= 0.60)
+2. **Uncertainty Gate**: Defer if uncertainty > 0.75 (explain if > 0.50)
+3. **Security Gate**: Agent tier must >= tool tier (no privilege escalation)
+4. **Adversarial Gate**: Guardian agent monitors for attack patterns
+5. **Human Approval Gate**: DELETE and PRIVILEGE tier require sign-off
 
-### Phase 3: Security Moat (Weeks 6-9)
-- [ ] Security gate (tier validation, rate limiting)
-- [ ] Guardian agent defense (BAD-ACTS-style)
-- [ ] Test H002: Guardian ASR reduction ≥ 40%
+**Flow:**
+```
+All gates must PASS or decision → DEFER/REFUSE/ESCALATE
+```
 
-**Acceptance:** ASR reduction ≥ 40%, ≤ 2% false positive rate
+## 16-Week Build Specification
 
----
+See `BUILD_SPEC.md` for full rollout plan:
 
-### Phase 4: Commercial Engine + Measurement (Weeks 10-16)
-- [ ] Narrative generator (7-beat spine, truth-bounded)
-- [ ] Test H003: MCP integration < 30 min per system
-- [ ] Test H004: Claim integrity ≥ 95%
-- [ ] MMM/MTA measurement policy
+- **Phase 1 (Weeks 1-2):** Contracts, Registries, Audit Log
+- **Phase 2 (Weeks 3-5):** Orchestration, Uncertainty Gates, H001 Test
+- **Phase 3 (Weeks 6-9):** Security, Guardian Agent, H002 Test
+- **Phase 4 (Weeks 10-16):** Commercial Engine, Measurement, H003/H004 Tests
 
-**Acceptance:** Claim integrity ≥ 95%, zero brand safety incidents
+## Testable Hypotheses
 
----
+Every claim is testable. See `docs/HYPOTHESIS_TESTING.md`:
 
-## Hypothesis Testing
-
-Every numeric claim is testable. Here's what we validate:
-
-| Hypothesis | Test | Target | Timeline | Status |
-|-----------|------|--------|----------|--------|
-| H001: Semantic entropy AUROC ≥ 0.75 | Internal 100-example set | ≥ 0.75 | Week 4 | UNTESTED |
-| H002: Guardian ASR reduction ≥ 40% | BAD-ACTS-style attacks | ≥ 40% | Week 9 | UNTESTED |
-| H003: MCP integration < 30 min | 3-system test | < 30 min | Week 2 | UNTESTED |
-| H004: Claim integrity ≥ 95% | 200-claim manual audit | ≥ 95% | Week 16 | UNTESTED |
-
----
+| ID | Hypothesis | Threshold | Timeline |
+|----|-----------|-----------|----------|
+| **H001** | Semantic entropy AUROC >= 0.75 | 0.75 | Week 4 |
+| **H002** | Guardian ASR reduction >= 40% | 0.40 | Week 9 |
+| **H003** | MCP integration < 30 min per system | 30 min | Week 2 |
+| **H004** | Claim integrity rate >= 95% | 0.95 | Week 16 |
 
 ## Documentation
 
-Read these in order:
+- **[CONTRACTS.md](docs/CONTRACTS.md)**: ClaimBundle specification, evidence rules, serialization
+- **[GATES.md](docs/GATES.md)**: Gate implementations, uncertainty methods, security specs
+- **[HYPOTHESIS_TESTING.md](docs/HYPOTHESIS_TESTING.md)**: 4 testable hypotheses (H001-H004)
+- **[BUILD_SPEC.md](BUILD_SPEC.md)**: 16-week rollout plan with team allocation
+- **[INTERFACE_PACK.json](INTERFACE_PACK.json)**: JSON schema for all interfaces
 
-1. **ARCHITECTURE.md** — How the system works
-2. **BUILD_SPEC.md** — How to build it (16 weeks)
-3. **CONTRACTS.md** — What ClaimBundle is
-4. **GATES.md** — How each gate works
-5. **HYPOTHESIS_TESTING.md** — How to test H001-H004
+## Source Code
 
----
+```
+src/
+├── __init__.py              # Package initialization
+├── claim_bundle.py          # ClaimBundle contract + serialization
+├── gates.py                 # Evidence, Uncertainty, Security, Adversarial, Human gates
+├── orchestrator.py          # LangGraph orchestration stub
+├── gates/                   # Gate implementations (per-file in phase 2+)
+├── uncertainty/             # Uncertainty methods (semantic_entropy, model_disagreement, etc.)
+├── mcp/                     # Model Context Protocol integration
+└── audit/                   # Immutable event logging
+```
 
-## Team (7 People, 16 Weeks)
+## Testing
 
-| Role | Count | Phases |
-|------|-------|--------|
-| Tech Lead | 1 | 1-4 |
-| Backend Eng | 2 | 1-4 |
-| ML Eng | 1 | 2-3 |
-| Security Eng | 1 | 3-4 |
-| DevOps | 1 | 1-4 |
-| Product/Measurement | 1 | 4 |
+```bash
+# Unit tests
+pytest tests/ -v
 
----
+# Acceptance tests (hypotheses)
+pytest tests/acceptance/ -v
+
+# H001: Semantic entropy AUROC
+pytest tests/acceptance/test_h001_semantic_entropy.py -v
+
+# H002: Guardian defense
+pytest tests/acceptance/test_h002_guardian_defense.py -v
+
+# H003: MCP integration speed
+pytest tests/acceptance/test_h003_mcp_speed.py -v
+
+# H004: Claim integrity
+pytest tests/acceptance/test_h004_claim_integrity.py -v
+```
+
+## Configuration
+
+Create `.env` for local development:
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:pass@localhost/prometheus
+REDIS_URL=redis://localhost:6379
+
+# LLM APIs
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Uncertainty method
+UNCERTAINTY_METHOD=semantic_entropy  # or model_disagreement
+
+# Gate thresholds
+DEFER_THRESHOLD=0.75
+EXPLAIN_THRESHOLD=0.50
+
+# Security
+ALLOWED_ORIGINS=http://localhost:3000,https://example.com
+```
+
+## References
+
+### Key Papers
+
+1. **Semantic Entropy** (Wang et al., Nature 2024)
+   - AUROC 0.78-0.81 for hallucination detection
+   - Generate k=5 answers, cluster by NLI, compute entropy
+   - https://nature.com/articles/s41586-024-07421-0
+
+2. **BAD-ACTS** (Nöther et al., Aug 2025)
+   - Attack-trained models reduce ASR by 25-50%
+   - Guardian agent defense patterns
+   - https://arxiv.org/abs/2408.xxxxx
+
+3. **MCP Spec** (Anthropic, June 2025)
+   - Model Context Protocol for tool integration
+   - DNS rebinding protection for HTTP transport
+   - https://spec.modelcontextprotocol.io
+
+### Standards
+
+- JSON Schema for ClaimBundle: `INTERFACE_PACK.json`
+- Python 3.10+ type hints throughout
+- OpenAPI 3.0 for HTTP endpoints (phase 3+)
+- IEEE 1012 for verification & validation
+
+## Status
+
+- ✅ **Repository initialized** with contracts, gates, orchestrator skeleton
+- ⏳ **Phase 1 (Weeks 1-2):** In progress (you are here)
+- ⏳ **Phase 2 (Weeks 3-5):** Scheduled
+- ⏳ **Phase 3 (Weeks 6-9):** Scheduled
+- ⏳ **Phase 4 (Weeks 10-16):** Scheduled
+
+## Contributing
+
+Follow the 16-week spec. All code must:
+1. Pass unit tests (`pytest tests/`)
+2. Pass type checking (`mypy src/`)
+3. Follow style guide (`black`, `flake8`)
+4. Include docstrings (Google format)
+5. Have audit trail for all gate-relevant changes
 
 ## License
 
-MIT. Build. Extend. Ship.
+Proprietary. See LICENSE file.
 
 ---
 
-**Version:** 2.0 (Corrected & Operationalized)  
-**Updated:** December 28, 2025  
-**Next:** Phase 1 Week 1
+**PROMETHEUS: AI agents that prove their claims.**
+
+Built by humans. Verified by humans. Controlled by humans.
